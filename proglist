@@ -1,0 +1,24 @@
+#!/bin/sh
+
+MFONT='-*-terminus-medium-r-normal-*-16-*-*-*-*-*-iso10646-*'
+CNFG='#AAAAAA'
+CNBG='#111133'
+CFFG='#FFFFAA'
+CFBG='#447744'
+
+proglist() {
+	paths=$(echo "$@" | sed 'y/:/ /')
+	ls -lL $paths 2>/dev/null \
+		| awk '$1 ~ /^[^d].*x/ { print $NF }' \
+		| sort | uniq
+}
+
+
+progsfile="/tmp/.proglist"
+proglist $PATH > $progsfile
+
+prog=`dmenu -fn "$MFONT" -nf "$CNFG"  -nb "$CNBG" -sf "$CFFG" -sb "$CFBG" < $progsfile`
+if [[ -n $prog ]]; then
+	$prog &
+fi
+

@@ -1,0 +1,83 @@
+#!/bin/sh
+
+WFONT='-*-terminus-medium-r-normal-*-16-*-*-*-*-*-iso10646-*'
+CNFG='#AAAAAA'
+CNBG='#111133'
+CFFG='#FFFFAA'
+CFBG='#447744'
+WMENU="dmenu -fn $WFONT -nf $CNFG  -nb $CNBG -sf $CFFG -sb $CFBG"
+WMNH=24
+WMNX=0
+WMNW=1024
+
+msg_inf(){
+  echo $* | dzen2 -p 8 -x $WMNX -h $WMNH -w $WMNW -ta c -fg '#EEEEEE' -bg '#004400' -fn "$WFONT" &
+}
+
+msg_err(){
+  echo $* | dzen2 -p 8 -x $WMNX -h $WMNH -w $WMNW -ta c -fg '#EEEE44' -bg '#DD0000' -fn "$WFONT" &
+}
+
+media_mount(){
+T=`mount "$1" 2>&1`
+if [[ $? != 0 ]]; then
+	msg_err "$T"
+else
+	msg_inf "$1 ПРИМОНТИРОВАНО"
+fi
+}
+
+media_forceumount(){
+MOU=`cat /etc/mtab | grep "$1"`
+if [[ -z $MOU ]]
+then
+  msg_inf "$1 НЕ ПРИМОНТИРОВАНО"
+else
+  T1=`sudo umount $1 2>&1`
+  if [[ $? != 0 ]] 
+  then
+    sudo fuser -k -m "$1"
+    sudo umount "$1"
+    if [[ $? == 0 ]]
+    then
+      msg_inf "$1 НАСИЛЬНО ОТМОНТИРОВАНО"
+    else
+      msg_err "$T1"
+    fi
+  else
+     msg_inf "$1 ОТМОНТИРОВАНО"
+  fi
+fi
+}
+
+mount_list(){
+Z=$(
+for a in `cat /etc/fstab | sed 's/#.*$//' | grep '/media/[a-zA-Z0-9]*' --only-matching`; do
+	if [[ -z `cat /etc/mtab | grep "$a"` ]]; then
+		echo "$a"
+	fi
+done | $WMENU)
+
+if [[ -z $Z ]]; then
+	return
+else
+	media_mount "$Z"
+fi
+}
+
+
+umount_list(){
+Z=`cat /etc/mtab | sed 's/#.*$//' | grep '/media/[a-zA-Z0-9]*' --only-matching | $WMENU`
+if [[ -z $Z ]]; then
+	return
+else
+	media_forceumount "$Z"
+fi
+}
+
+if [[ $1 == '--umount' ]]; then
+	umount_list
+else
+	mount_list
+fi
+
